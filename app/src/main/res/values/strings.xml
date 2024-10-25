@@ -19,7 +19,7 @@
     <string name="calc_btn_plus">\u002B</string>
     <string name="calc_btn_pm">\u00B1</string>
     <string name="calc_btn_coma">.</string>
-    <string name="calc_btn_equal">\u2261</string>
+    <string name="calc_btn_equal">\u003D</string>
 
     <string name="calc_btn_digit_0">0</string>
     <string name="calc_btn_digit_1">1</string>
