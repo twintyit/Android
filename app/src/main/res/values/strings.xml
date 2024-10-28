@@ -32,6 +32,7 @@
     <string name="calc_btn_digit_8">8</string>
     <string name="calc_btn_digit_9">9</string>
 
+    <string name="calc_msg_too_long">Ліміт цифр досягнуто</string>
 
 
 
