@@ -43,24 +43,23 @@ public class CalcActivity extends AppCompatActivity {
             findViewById(btnId).setOnClickListener(this::onDigitClick);
         }
 
-        // Установка обработчиков для операций
         findViewById(R.id.calc_btn_plus).setOnClickListener(this::onOperatorClick);
         findViewById(R.id.calc_btn_minus).setOnClickListener(this::onOperatorClick);
         findViewById(R.id.calc_btn_multiply).setOnClickListener(this::onOperatorClick);
         findViewById(R.id.calc_btn_divide).setOnClickListener(this::onOperatorClick);
         findViewById(R.id.calc_btn_equal).setOnClickListener(this::onEqualClick);
+        findViewById(R.id.calc_btn_coma).setOnClickListener(this::onDecimalClick);
+        findViewById(R.id.calc_btn_pm).setOnClickListener(this::onPlusMinusClick);
 
-        // Обработчики для функций "C" и "Backspace"
         findViewById(R.id.calc_btn_c).setOnClickListener(v -> clearAll());
         findViewById(R.id.calc_btn_backspace).setOnClickListener(v -> backspace());
+        findViewById(R.id.calc_btn_ce).setOnClickListener( v -> onCEClick());
 
-        // Обработчики для кнопок специальных операций
         findViewById(R.id.calc_btn_square).setOnClickListener(v -> applyUnaryOperation("square"));
         findViewById(R.id.calc_btn_inverse).setOnClickListener(v -> applyUnaryOperation("inverse"));
         findViewById(R.id.calc_btn_sqrt).setOnClickListener(v -> applyUnaryOperation("sqrt"));
         findViewById(R.id.calc_btn_percent).setOnClickListener(v -> applyUnaryOperation("percent"));
 
-        // Начальный сброс
         clearAll();
     }
 
@@ -86,55 +85,79 @@ public class CalcActivity extends AppCompatActivity {
     private void onOperatorClick(View view) {
         String selectedOperator = ((Button) view).getText().toString();
 
-        if (!operator.isEmpty()) {  // Если оператор уже задан
-            onEqualClick(view);      // Вычисляем текущий результат
+        if (!operator.isEmpty()) {
+            onEqualClick(view);  // Вычисляем текущий результат, если оператор уже установлен
         }
 
-        // Устанавливаем новый оператор и обновляем операнд1 на основе результата
         operator = selectedOperator;
         operand1 = Double.parseDouble(tvResult.getText().toString());
-        tvHistory.setText(String.format(Locale.getDefault(), "%.0f %s", operand1, operator));
+        tvHistory.setText(formatExpressionForHistory(operand1, operator, null));
         isNewInput = true;
     }
 
     private void onEqualClick(View view) {
-        if (operator.isEmpty()) {
-            return; // Если оператор не выбран, ничего не делаем
-        }
+        if (operator.isEmpty()) return;
 
         operand2 = Double.parseDouble(tvResult.getText().toString());
-        double result = 0;
+        Double result = performOperation(operand1, operand2, operator);
 
-        switch (operator) {
-            case "+":
-                result = operand1 + operand2;
-                break;
-            case unicodeMinus:
-                result = operand1 - operand2;
-                break;
-            case "×":
-                result = operand1 * operand2;
-                break;
-            case "÷":
-                if (operand2 != 0) {
-                    result = operand1 / operand2;
-                } else {
-                    Toast.makeText(this, "Cannot divide by zero", Toast.LENGTH_SHORT).show();
-                    clearAll();
-                    return;
-                }
-                break;
+        if (result == null) {
+            Toast.makeText(this, "Cannot divide by zero", Toast.LENGTH_SHORT).show();
+            clearAll();
+            return;
         }
 
-        // Форматируем и добавляем в историю полное выражение с результатом
-        String fullExpression = String.format(Locale.getDefault(), "%.0f %s %.0f =", operand1, operator, operand2);
-        tvHistory.setText(fullExpression);
-
-        // Обновляем результат и операнд для дальнейших вычислений
+        tvHistory.setText(formatExpressionForHistory(operand1, operator, operand2));
         tvResult.setText(formatResult(result));
         operand1 = result;
-        operator = ""; // Сбрасываем оператор для нового вычисления
+        operator = "";  // Сбрасываем оператор для нового вычисления
         isNewInput = true;
+    }
+
+    private void onPlusMinusClick(View view) {
+        String currentText = tvResult.getText().toString();
+
+        if (!currentText.equals("0")) {
+            double currentValue = Double.parseDouble(currentText);
+            currentValue = -currentValue;
+            tvResult.setText(formatResult( currentValue ));
+        }
+    }
+
+    private void onCEClick() {
+        tvResult.setText("0"); // Очищаем поле результата, не затрагивая оператор и историю
+        isNewInput = true; // Устанавливаем флаг, чтобы следующее нажатие началось с нового ввода
+    }
+
+    private void onDecimalClick(View view) {
+        String currentText = tvResult.getText().toString();
+
+        // Если точка уже присутствует в числе, больше не добавляем её
+        if (!currentText.contains(".")) {
+            if (isNewInput) {
+                // Если это начало нового ввода, ставим "0." вместо простой точки
+                tvResult.setText("0.");
+                isNewInput = false;
+            } else {
+                // Добавляем точку к текущему числу
+                tvResult.setText(currentText + ".");
+            }
+        }
+    }
+
+    private Double performOperation(double operand1, double operand2, String operator) {
+        switch (operator) {
+            case "+":
+                return operand1 + operand2;
+            case unicodeMinus:
+                return operand1 - operand2;
+            case "×":
+                return operand1 * operand2;
+            case "÷":
+                return (operand2 != 0) ? operand1 / operand2 : null;
+            default:
+                return null;
+        }
     }
 
     private void clearAll() {
@@ -191,14 +214,25 @@ public class CalcActivity extends AppCompatActivity {
     }
 
     private String formatResult(double result) {
-        if (result == (long) result) {
-            return String.format(Locale.getDefault(), "%d", (long) result);
+        String resultStr = String.valueOf(result);
+        int decimalIndex = resultStr.indexOf('.');
+
+        if (decimalIndex < 0) {
+            return resultStr;
         } else {
-            return String.format(Locale.getDefault(), "%.2f", result);
+            int precision = Math.min(maxDigits - decimalIndex, resultStr.length() - decimalIndex - 1);
+            return String.format(Locale.getDefault(), "%." + precision + "f", result).replaceAll("0+$", "").replaceAll("\\.$", "");
         }
     }
 
-    // Сохранение состояния
+    private String formatExpressionForHistory(double operand1, String operator, Double operand2) {
+        if (operand2 == null) {
+            return String.format(Locale.getDefault(), "%s %s", formatResult(operand1), operator);
+        } else {
+            return String.format(Locale.getDefault(), "%s %s %s =", formatResult(operand1), operator, formatResult(operand2));
+        }
+    }
+
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);

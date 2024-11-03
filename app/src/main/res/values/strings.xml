@@ -2,6 +2,7 @@
     <string name="app_name">Android_Pv-221</string>
     <string name="app_title">Welcome to Android</string>
     <string name="main_btn_calc">Calculator</string>
+    <string name="main_btn_game">2048</string>
 
     <!-- region Calc -->
     <string name="calc_tv_title">Calculator</string>
@@ -33,7 +34,6 @@
     <string name="calc_btn_digit_9">9</string>
 
     <string name="calc_msg_too_long">Ліміт цифр досягнуто</string>
-
 
 
     <!-- endregion -->
