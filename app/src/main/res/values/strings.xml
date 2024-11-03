@@ -3,6 +3,7 @@
     <string name="app_title">Welcome to Android</string>
     <string name="main_btn_calc">Calculator</string>
     <string name="main_btn_game">2048</string>
+    <string name="main_btn_anim">Animation</string>
 
     <!-- region Calc -->
     <string name="calc_tv_title">Calculator</string>

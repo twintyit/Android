@@ -1,8 +1,11 @@
 package itstep.learning.android_pv_221;
 
 import android.annotation.SuppressLint;
+import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.view.Gravity;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -22,6 +25,8 @@ public class GameActivity extends AppCompatActivity {
     private final int[][] cells = new int[N][N];
     private final TextView[][] tvCells = new TextView[N][N];
     private final Random random = new Random();
+    private Animation spawnAnimation, collapseAnimation;
+    private enum Direction { UP, DOWN, LEFT, RIGHT }
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
@@ -34,6 +39,9 @@ public class GameActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+
+        spawnAnimation = AnimationUtils.loadAnimation( this, R.anim.game_spawn ) ;
+        collapseAnimation = AnimationUtils.loadAnimation( this, R.anim.game_collapse ) ;
 
         LinearLayout gameField = findViewById( R.id.game_ll_field );
         gameField.post( () -> {   // дії, що будуть виконані коли
@@ -55,7 +63,13 @@ public class GameActivity extends AppCompatActivity {
 
             @Override
             public void OnSwipeBottom() {
-                Toast.makeText(GameActivity.this, "Bottom", Toast.LENGTH_SHORT).show();
+                if( moveBottom() ){
+                    spawnCell();
+                    showField();
+                }
+                else{
+                    Toast.makeText(GameActivity.this, "No Bottom Move", Toast.LENGTH_SHORT).show();
+                }
             }
 
             @Override
@@ -71,12 +85,24 @@ public class GameActivity extends AppCompatActivity {
 
             @Override
             public void OnSwipeRight() {
-                Toast.makeText(GameActivity.this, "Right", Toast.LENGTH_SHORT).show();
+                if( moveRight() ) {
+                    spawnCell();
+                    showField();
+                }
+                else {
+                    Toast.makeText(GameActivity.this, "No Right Move", Toast.LENGTH_SHORT).show();
+                }
             }
 
             @Override
             public void OnSwipeTop() {
-                Toast.makeText(GameActivity.this, "Top", Toast.LENGTH_SHORT).show();
+                if( moveTop() ) {
+                    spawnCell();
+                    showField();
+                }
+                else {
+                    Toast.makeText(GameActivity.this, "No Top Move", Toast.LENGTH_SHORT).show();
+                }
             }
         });
 
@@ -84,6 +110,7 @@ public class GameActivity extends AppCompatActivity {
         spawnCell();
         showField();
     }
+
 
     private boolean moveLeft(){
         boolean result = false;
@@ -97,6 +124,7 @@ public class GameActivity extends AppCompatActivity {
                     else {
                         if( cells[i][j] == cells[i][j0]){
                             cells[i][j] *= 2;
+                            tvCells[i][j].setTag( collapseAnimation );
                             cells[i][j0] = 0;
                             result = true;
                             j0 = -1;
@@ -116,8 +144,125 @@ public class GameActivity extends AppCompatActivity {
                 }
                 else if( j0 != -1 ){
                     cells[i][j0] = cells[i][j];
+                    tvCells[i][j0].setTag( tvCells[i][j].getTag() );
                     cells[i][j] = 0;
+                    tvCells[i][j].setTag( null );
                     j0 += 1;
+                    result = true;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private boolean moveRight() {
+        boolean result = false;
+        for( int i = 0; i < N; i++ ) {
+            boolean wasShift;
+            do {
+                wasShift = false;
+                for (int j = N - 1; j > 0; j--) {
+                    if (cells[i][j - 1] != 0 && cells[i][j] == 0) {
+                        cells[i][j] = cells[i][j - 1];
+                        cells[i][j - 1] = 0;
+                        wasShift = result = true;
+                    }
+                }
+            } while( wasShift );
+            // Collapse
+            for( int j = N - 1; j > 0; j-- ) {          //  [2 2 4 4]
+                if( cells[i][j - 1] == cells[i][j] && cells[i][j] != 0 ) {
+                    cells[i][j] *= 2;                   //  [2 2 4 8]
+                    tvCells[i][j].setTag( collapseAnimation );
+                    // cells[i][j - 1] = 0;             //  [2 2 0 8]
+                    for( int k = j - 1; k > 0; k-- ) {  //  [2 2 2 8]
+                        cells[i][k] = cells[i][k - 1];
+                    }
+                    cells[i][0] = 0;                    //  [0 2 2 8]
+                    result = true;
+                }
+            }
+        }
+        return result;
+    }
+
+    public boolean moveTop() {
+        boolean result = false;
+
+        for (int j = 0; j < N; j++) {  // Проходим по каждому столбцу
+            int i0 = -1;
+
+            // Объединение ячеек в текущем столбце при движении вверх
+            for (int i = 0; i < N; i++) {
+                if (cells[i][j] != 0) {
+                    if (i0 == -1) {
+                        i0 = i;
+                    } else {
+                        if (cells[i][j] == cells[i0][j]) {
+                            cells[i][j] *= 2;
+                            tvCells[i][j].setTag(collapseAnimation);
+                            cells[i0][j] = 0;
+                            result = true;
+                            i0 = -1;
+                        } else {
+                            i0 = i;
+                        }
+                    }
+                }
+            }
+
+            i0 = -1;
+
+            // Сдвиг ячеек вверх в текущем столбце
+            for (int i = 0; i < N; i++) {
+                if (cells[i][j] == 0) {
+                    if (i0 == -1) {
+                        i0 = i;
+                    }
+                } else if (i0 != -1) {
+                    cells[i0][j] = cells[i][j];
+                    tvCells[i0][j].setTag(tvCells[i][j].getTag());
+                    cells[i][j] = 0;
+                    tvCells[i][j].setTag(null);
+                    i0 += 1;
+                    result = true;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    public boolean moveBottom() {
+        boolean result = false;
+
+        for (int j = 0; j < N; j++) {  // Проходим по каждому столбцу
+            boolean wasShift;
+
+            // Сдвиг всех ячеек вниз в текущем столбце
+            do {
+                wasShift = false;
+                for (int i = N - 1; i > 0; i--) {
+                    if (cells[i - 1][j] != 0 && cells[i][j] == 0) {
+                        cells[i][j] = cells[i - 1][j];
+                        cells[i - 1][j] = 0;
+                        wasShift = result = true;
+                    }
+                }
+            } while (wasShift);
+
+            // Объединение ячеек в текущем столбце при движении вниз
+            for (int i = N - 1; i > 0; i--) {
+                if (cells[i - 1][j] == cells[i][j] && cells[i][j] != 0) {
+                    cells[i][j] *= 2;
+                    tvCells[i][j].setTag(collapseAnimation);
+
+                    // Сдвиг оставшихся ячеек вверх
+                    for (int k = i - 1; k > 0; k--) {
+                        cells[k][j] = cells[k - 1][j];
+                    }
+                    cells[0][j] = 0;
                     result = true;
                 }
             }
@@ -144,6 +289,7 @@ public class GameActivity extends AppCompatActivity {
         Coordinates randomCoordinates = freeCells.get( random.nextInt( freeCells.size() ) );
         cells[randomCoordinates.x][randomCoordinates.y] =
                 random.nextInt(10) == 0 ? 4 : 2;
+        tvCells[randomCoordinates.x][randomCoordinates.y].setTag( spawnAnimation );
         return true;
     }
 
@@ -168,14 +314,18 @@ public class GameActivity extends AppCompatActivity {
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
                 tvCells[i][j].setText( String.valueOf( cells[i][j] ) );
-                tvCells[i][j].setBackgroundColor( getResources().getColor(
-                        getResources().getIdentifier(
-                                cells[i][j] <= 2048 ? "game_tile_" + cells[i][j] : "game_tile_other",
-                                "color",
-                                getPackageName()
+                tvCells[i][j].getBackground().setColorFilter(
+                        getResources().getColor(
+                                getResources().getIdentifier(
+                                        cells[i][j] <= 2048
+                                                ? "game_tile_" + cells[i][j]
+                                                : "game_tile_other",
+                                        "color",
+                                        getPackageName()
+                                ),
+                                getTheme()
                         ),
-                        getTheme()
-                ) );
+                        PorterDuff.Mode.SRC_ATOP);
 
                 tvCells[i][j].setTextColor( getResources().getColor(
                         getResources().getIdentifier(
@@ -185,6 +335,10 @@ public class GameActivity extends AppCompatActivity {
                         ),
                         getTheme()
                 ) );
+                if( tvCells[i][j].getTag() instanceof Animation ) {
+                    tvCells[i][j].startAnimation( (Animation) tvCells[i][j].getTag() );
+                    tvCells[i][j].setTag( null );
+                }
             }
         }
     }
