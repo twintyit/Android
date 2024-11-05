@@ -5,6 +5,24 @@
     <string name="main_btn_game">2048</string>
     <string name="main_btn_anim">Animation</string>
 
+    <!-- region Anim-->
+    <string name="main_tv_alpha">Alpha</string>
+    <string name="main_tv_scale">Scale</string>
+    <string name="main_tv_rotate">Rotate</string>
+    <string name="main_tv_translate">Translate</string>
+    <string name="main_tv_combo">Combo</string>
+    <!-- endregion -->
+
+    <!-- region Game-->
+    <string name="game_tv_score">SCORE\n%s</string>
+    <string name="game_tv_best">BEST\n%s</string>
+    <string name="game_tv_new">NEW</string>
+    <string name="game_tv_undo">UNDO</string>
+    <string name="game_tv_hint">Собирай 2048</string>
+    <string name="game_tv_2048">2048</string>
+    <!-- endregion -->
+
+
     <!-- region Calc -->
     <string name="calc_tv_title">Calculator</string>
     <string name="calc_btn_percent">\u0025</string>

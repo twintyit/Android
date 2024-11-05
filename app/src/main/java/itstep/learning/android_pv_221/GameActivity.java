@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -22,11 +23,13 @@ import java.util.Random;
 
 public class GameActivity extends AppCompatActivity {
     private final int N = 4;
-    private final int[][] cells = new int[N][N];
-    private final TextView[][] tvCells = new TextView[N][N];
+    private int[][] cells = new int[N][N];
+    private TextView[][] tvCells = new TextView[N][N];
     private final Random random = new Random();
-    private Animation spawnAnimation, collapseAnimation;
+    private Animation spawnAnimation, collapseAnimation, bestScoreAnimation;
     private enum Direction { UP, DOWN, LEFT, RIGHT }
+    private int score, bestScore;
+    private TextView tvScore, tvBestScore;
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
@@ -42,8 +45,16 @@ public class GameActivity extends AppCompatActivity {
 
         spawnAnimation = AnimationUtils.loadAnimation( this, R.anim.game_spawn ) ;
         collapseAnimation = AnimationUtils.loadAnimation( this, R.anim.game_collapse ) ;
+        bestScoreAnimation = AnimationUtils.loadAnimation( this, R.anim.best_score ) ;
 
         LinearLayout gameField = findViewById( R.id.game_ll_field );
+        tvScore = findViewById(R.id.game_tv_score);
+        tvBestScore = findViewById(R.id.game_tv_best_score);
+        Button btnNewGame = findViewById(R.id.game_btn_new);
+        Button btnUndo = findViewById(R.id.game_btn_undo);
+
+        btnNewGame.setOnClickListener(v -> onNewGameClick());
+
         gameField.post( () -> {   // дії, що будуть виконані коли
             // об'єкт (gameField) буде готовий приймати повідомлення,
             // тобто завершить "будову"
@@ -111,7 +122,6 @@ public class GameActivity extends AppCompatActivity {
         showField();
     }
 
-
     private boolean moveLeft(){
         boolean result = false;
         for (int i = 0; i < N; i++) {
@@ -124,6 +134,7 @@ public class GameActivity extends AppCompatActivity {
                     else {
                         if( cells[i][j] == cells[i][j0]){
                             cells[i][j] *= 2;
+                            score += cells[i][j];
                             tvCells[i][j].setTag( collapseAnimation );
                             cells[i][j0] = 0;
                             result = true;
@@ -174,6 +185,7 @@ public class GameActivity extends AppCompatActivity {
             for( int j = N - 1; j > 0; j-- ) {          //  [2 2 4 4]
                 if( cells[i][j - 1] == cells[i][j] && cells[i][j] != 0 ) {
                     cells[i][j] *= 2;                   //  [2 2 4 8]
+                    score += cells[i][j];
                     tvCells[i][j].setTag( collapseAnimation );
                     // cells[i][j - 1] = 0;             //  [2 2 0 8]
                     for( int k = j - 1; k > 0; k-- ) {  //  [2 2 2 8]
@@ -187,7 +199,7 @@ public class GameActivity extends AppCompatActivity {
         return result;
     }
 
-    public boolean moveTop() {
+    private boolean moveTop() {
         boolean result = false;
 
         for (int j = 0; j < N; j++) {  // Проходим по каждому столбцу
@@ -201,6 +213,7 @@ public class GameActivity extends AppCompatActivity {
                     } else {
                         if (cells[i][j] == cells[i0][j]) {
                             cells[i][j] *= 2;
+                            score += cells[i][j];
                             tvCells[i][j].setTag(collapseAnimation);
                             cells[i0][j] = 0;
                             result = true;
@@ -234,13 +247,12 @@ public class GameActivity extends AppCompatActivity {
         return result;
     }
 
-    public boolean moveBottom() {
+    private boolean moveBottom() {
         boolean result = false;
 
-        for (int j = 0; j < N; j++) {  // Проходим по каждому столбцу
+        for (int j = 0; j < N; j++) {
             boolean wasShift;
 
-            // Сдвиг всех ячеек вниз в текущем столбце
             do {
                 wasShift = false;
                 for (int i = N - 1; i > 0; i--) {
@@ -252,13 +264,12 @@ public class GameActivity extends AppCompatActivity {
                 }
             } while (wasShift);
 
-            // Объединение ячеек в текущем столбце при движении вниз
             for (int i = N - 1; i > 0; i--) {
                 if (cells[i - 1][j] == cells[i][j] && cells[i][j] != 0) {
                     cells[i][j] *= 2;
+                    score += cells[i][j];
                     tvCells[i][j].setTag(collapseAnimation);
 
-                    // Сдвиг оставшихся ячеек вверх
                     for (int k = i - 1; k > 0; k--) {
                         cells[k][j] = cells[k - 1][j];
                     }
@@ -269,6 +280,14 @@ public class GameActivity extends AppCompatActivity {
         }
 
         return result;
+    }
+
+    private void onNewGameClick(){
+        cells = new int[N][N];
+        tvCells = new TextView[N][N];
+        initField();
+        spawnCell();
+        showField();
     }
 
     private boolean spawnCell(){
@@ -307,7 +326,8 @@ public class GameActivity extends AppCompatActivity {
                 );
             }
         }
-
+        score = 0;
+        bestScore = 20;
     }
 
     private void showField(){
@@ -341,6 +361,17 @@ public class GameActivity extends AppCompatActivity {
                 }
             }
         }
+        tvScore.setText( getString(R.string.game_tv_score, String.valueOf( score )));
+        if( score > bestScore ){
+            bestScore = score;
+            tvBestScore.setTag( bestScoreAnimation );
+        }
+        tvBestScore.setText( getString(R.string.game_tv_best, String.valueOf( bestScore )));
+        if(tvBestScore.getTag() instanceof Animation){
+            tvBestScore.startAnimation((Animation) tvBestScore.getTag());
+            tvBestScore.setTag( null );
+        }
+
     }
 
     class Coordinates{
