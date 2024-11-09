@@ -4,13 +4,15 @@
     <string name="main_btn_calc">Calculator</string>
     <string name="main_btn_game">2048</string>
     <string name="main_btn_anim">Animation</string>
+    <string name="main_btn_chat">Chat</string>
+    <string name="main_btn_exchange">Exchange</string>
 
     <!-- region Anim-->
-    <string name="main_tv_alpha">Alpha</string>
-    <string name="main_tv_scale">Scale</string>
-    <string name="main_tv_rotate">Rotate</string>
-    <string name="main_tv_translate">Translate</string>
-    <string name="main_tv_combo">Combo</string>
+    <string name="anim_tv_alpha">Alpha</string>
+    <string name="anim_tv_scale">Scale</string>
+    <string name="anim_tv_rotate">Rotate</string>
+    <string name="anim_tv_translate">Translate</string>
+    <string name="anim_tv_combo">Combo</string>
     <!-- endregion -->
 
     <!-- region Game-->
@@ -53,9 +55,5 @@
     <string name="calc_btn_digit_9">9</string>
 
     <string name="calc_msg_too_long">Ліміт цифр досягнуто</string>
-
-
-    <!-- endregion -->
-
 
 </resources>

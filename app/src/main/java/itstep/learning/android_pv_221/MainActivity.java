@@ -3,6 +3,7 @@ package itstep.learning.android_pv_221;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -10,6 +11,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+
+import itstep.learning.android_pv_221.exchange.ExchangeRatesActivity;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -23,23 +26,39 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
-        findViewById( R.id.main_btn_calc ).setOnClickListener(this::onCalcButtonClick);
-        findViewById( R.id.main_btn_game ).setOnClickListener(this::onGameButtonClick);
+        Button button = findViewById( R.id.main_btn_calc );
+        button.setOnClickListener( this::onCalcButtonClick );
+
+        findViewById( R.id.main_btn_game ).setOnClickListener( this::onGameButtonClick );
         findViewById( R.id.main_btn_anim ).setOnClickListener( this::onAnimButtonClick );
+        findViewById( R.id.main_btn_chat ).setOnClickListener( this::onChatButtonClick );
+        findViewById( R.id.main_btn_exchange ).setOnClickListener( this::onExchangeButtonClick );
     }
 
-    private void onCalcButtonClick(View view){
-        Intent intent = new Intent(this, CalcActivity.class);
+    private void onCalcButtonClick( View view ) {
+        Intent intent = new Intent( MainActivity.this, CalcActivity.class );
         startActivity( intent );
     }
-
-    private void onGameButtonClick(View view){
-        Intent intent = new Intent(this, GameActivity.class);
+    private void onGameButtonClick( View view ) {
+        Intent intent = new Intent( MainActivity.this, GameActivity.class );
         startActivity( intent );
     }
-
     private void onAnimButtonClick( View view ) {
         Intent intent = new Intent( MainActivity.this, AnimActivity.class );
         startActivity( intent );
     }
+    private void onChatButtonClick( View view ) {
+        Intent intent = new Intent( MainActivity.this, ChatActivity.class );
+        startActivity( intent );
+    }
+    private void onExchangeButtonClick( View view ) {
+        Intent intent = new Intent( MainActivity.this, ExchangeRatesActivity.class );
+        startActivity( intent );
+    }
 }
+/*
+Д.З. Створити проєкт, налаштувати відображення
+(кольори, шрифти, розміри, відступи)
+Опублікувати проєкт, додати посилання на репозиторій
+На репозиторії додати папку з скріншотами.
+ */
