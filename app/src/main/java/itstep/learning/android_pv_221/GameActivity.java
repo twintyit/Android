@@ -1,8 +1,11 @@
 package itstep.learning.android_pv_221;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.PorterDuff;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
@@ -12,24 +15,35 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.logging.Logger;
 
 public class GameActivity extends AppCompatActivity {
+   private final String bestScoreFilename = "best_score.2048";
     private final int N = 4;
     private int[][] cells = new int[N][N];
+    private int[][] undo;
+    private int prevScore;
     private TextView[][] tvCells = new TextView[N][N];
     private final Random random = new Random();
     private Animation spawnAnimation, collapseAnimation, bestScoreAnimation;
-    private enum Direction { UP, DOWN, LEFT, RIGHT }
     private int score, bestScore;
     private TextView tvScore, tvBestScore;
+    private boolean playOn = false;
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
@@ -50,17 +64,13 @@ public class GameActivity extends AppCompatActivity {
         LinearLayout gameField = findViewById( R.id.game_ll_field );
         tvScore = findViewById(R.id.game_tv_score);
         tvBestScore = findViewById(R.id.game_tv_best_score);
-        Button btnNewGame = findViewById(R.id.game_btn_new);
-        Button btnUndo = findViewById(R.id.game_btn_undo);
 
-        btnNewGame.setOnClickListener(v -> onNewGameClick());
+        findViewById(R.id.game_btn_new).setOnClickListener( v -> onNewGameClick() );
+        findViewById(R.id.game_btn_undo).setOnClickListener(v -> undoMove() );
 
-        gameField.post( () -> {   // дії, що будуть виконані коли
-            // об'єкт (gameField) буде готовий приймати повідомлення,
-            // тобто завершить "будову"
+        gameField.post( () -> {
             int vw = this.getWindow().getDecorView().getWidth();
             int fieldMargin = 20;
-            // Змінюємо параметри Layout для gameField з метою зробити його квадратним
             LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
                     vw - 2 * fieldMargin,
                     vw - 2 * fieldMargin
@@ -74,7 +84,9 @@ public class GameActivity extends AppCompatActivity {
 
             @Override
             public void OnSwipeBottom() {
-                if( moveBottom() ){
+                if( canMoveBottom() ){
+                    saveField();
+                    moveBottom();
                     spawnCell();
                     showField();
                 }
@@ -85,7 +97,9 @@ public class GameActivity extends AppCompatActivity {
 
             @Override
             public void OnSwipeLeft() {
-               if( moveLeft() ){
+               if( canMoveLeft() ){
+                   saveField();
+                   moveLeft();
                    spawnCell();
                    showField();
                }
@@ -96,7 +110,9 @@ public class GameActivity extends AppCompatActivity {
 
             @Override
             public void OnSwipeRight() {
-                if( moveRight() ) {
+                if( canMoveRight() ) {
+                    saveField();
+                    moveRight();
                     spawnCell();
                     showField();
                 }
@@ -107,7 +123,9 @@ public class GameActivity extends AppCompatActivity {
 
             @Override
             public void OnSwipeTop() {
-                if( moveTop() ) {
+                if( canMoveTop() ) {
+                    saveField();
+                    moveTop();
                     spawnCell();
                     showField();
                 }
@@ -122,8 +140,122 @@ public class GameActivity extends AppCompatActivity {
         showField();
     }
 
-    private boolean moveLeft(){
-        boolean result = false;
+    private void checkWin() {
+        if (playOn){
+            return;
+        }
+        boolean found2048 = false;
+
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+                if (cells[i][j] == 2048) {
+                    found2048 = true;
+                    break;
+                }
+            }
+            if (found2048) break;
+        }
+        if (found2048) {
+            showWinDialog();
+        }
+    }
+
+    private void showWinDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Поздравляем!")
+                .setMessage("Вы собрали 2048! Хотите начать новую игру или продолжить?")
+                .setPositiveButton("Новая игра", (dialog, which) -> onNewGameClick())
+                .setNegativeButton("Продолжить", (dialog, which) -> {
+                    playOn = true;
+                    dialog.dismiss();
+                })
+                .setCancelable(false);
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    private void saveField() {
+        prevScore = score;
+        undo = new int[N][N];
+        for (int i = 0; i < N; i++) {
+            System.arraycopy(cells[i], 0, undo[i], 0, N);
+        }
+
+    }
+
+    private void undoMove(){
+        if(undo == null){
+            showMessage();
+            return;
+        }
+        score = prevScore;
+        for (int i = 0; i < N; i++) {
+            System.arraycopy( undo[i], 0, cells[i], 0, N);
+        }
+        undo = null;
+        showField();
+
+    }
+
+    private void showMessage(){
+        new AlertDialog
+                .Builder(this, androidx.appcompat.R.style.Theme_AppCompat_Dialog_Alert)
+                .setTitle("Warning")
+                .setIcon( android.R.drawable.ic_dialog_alert )
+                .setMessage("It is impossible to undo the move")
+                .setNeutralButton("Close", (dlg, btn) ->{})
+                .setPositiveButton("Subscription", (dlg, btn) -> Toast.makeText(this, "Soon...", Toast.LENGTH_SHORT ).show() )
+                .setNegativeButton("Exit", (dlg, btn) -> finish() )
+                .setCancelable(false)
+                .show();
+
+    }
+
+    private boolean canMoveLeft(){
+        for (int i = 0; i < N; i++) {
+            for (int j = 1; j < N; j++) {
+                if ( cells[i][j] != 0  && (cells[i][j-1] == 0 || cells[i][j-1] == cells[i][j] ) ) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean canMoveRight() {
+        for (int i = 0; i < N; i++) {
+            for (int j = N - 2; j >= 0; j--) { // Начинаем с предпоследней ячейки в строке и идем влево
+                if (cells[i][j] != 0 && (cells[i][j + 1] == 0 || cells[i][j + 1] == cells[i][j])) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean canMoveTop() {
+        for (int j = 0; j < N; j++) {
+            for (int i = 1; i < N; i++) { // Начинаем со второй строки и идем вниз
+                if (cells[i][j] != 0 && (cells[i - 1][j] == 0 || cells[i - 1][j] == cells[i][j])) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean canMoveBottom() {
+        for (int j = 0; j < N; j++) {
+            for (int i = N - 2; i >= 0; i--) { // Начинаем с предпоследней строки и идем вверх
+                if (cells[i][j] != 0 && (cells[i + 1][j] == 0 || cells[i + 1][j] == cells[i][j])) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private void moveLeft(){
         for (int i = 0; i < N; i++) {
             int j0 = -1;
             for (int j = 0; j < N; j++) {
@@ -137,7 +269,6 @@ public class GameActivity extends AppCompatActivity {
                             score += cells[i][j];
                             tvCells[i][j].setTag( collapseAnimation );
                             cells[i][j0] = 0;
-                            result = true;
                             j0 = -1;
                         }
                         else{
@@ -159,12 +290,9 @@ public class GameActivity extends AppCompatActivity {
                     cells[i][j] = 0;
                     tvCells[i][j].setTag( null );
                     j0 += 1;
-                    result = true;
                 }
             }
         }
-
-        return result;
     }
 
     private boolean moveRight() {
@@ -282,9 +410,38 @@ public class GameActivity extends AppCompatActivity {
         return result;
     }
 
+    private void saveBestScore(){
+        try( FileOutputStream fos = openFileOutput(bestScoreFilename, Context.MODE_PRIVATE);
+            DataOutputStream writer = new DataOutputStream( fos );
+        ){
+            writer.writeInt( bestScore );
+            writer.flush();
+        }
+        catch (IOException e) {
+            Log.e( "GameActivity::saveBestScore",
+                    e.getMessage() != null ? e.getMessage() : "Error writing file"
+            );
+        }
+    }
+
+    private void loadBestScore(){
+        try(FileInputStream fis = openFileInput(bestScoreFilename );
+            DataInputStream reader = new DataInputStream( fis );
+        ){
+            bestScore = reader.readInt();
+        }
+        catch (IOException e) {
+            Log.e( "GameActivity::loadBestScore",
+                    e.getMessage() != null ? e.getMessage() : "Error reading file"
+            );
+        }
+    }
+
     private void onNewGameClick(){
         cells = new int[N][N];
         tvCells = new TextView[N][N];
+        undo = null;
+        playOn = false;
         initField();
         spawnCell();
         showField();
@@ -327,7 +484,7 @@ public class GameActivity extends AppCompatActivity {
             }
         }
         score = 0;
-        bestScore = 20;
+        loadBestScore();
     }
 
     private void showField(){
@@ -364,6 +521,7 @@ public class GameActivity extends AppCompatActivity {
         tvScore.setText( getString(R.string.game_tv_score, String.valueOf( score )));
         if( score > bestScore ){
             bestScore = score;
+            saveBestScore();
             tvBestScore.setTag( bestScoreAnimation );
         }
         tvBestScore.setText( getString(R.string.game_tv_best, String.valueOf( bestScore )));
@@ -371,7 +529,7 @@ public class GameActivity extends AppCompatActivity {
             tvBestScore.startAnimation((Animation) tvBestScore.getTag());
             tvBestScore.setTag( null );
         }
-
+        checkWin();
     }
 
     class Coordinates{
