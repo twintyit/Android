@@ -37,6 +37,10 @@
             android:layout_height="48dp"
             android:background="@android:drawable/ic_popup_reminder"
             android:backgroundTint="@color/calc_btn_digit" />
+        <ImageView
+            android:id="@+id/chat_img"
+            android:layout_width="48dp"
+            android:layout_height="48dp"/>
     </LinearLayout>
 
     <ScrollView
@@ -74,5 +78,15 @@
             android:contentDescription="Send"
             android:src="@android:drawable/ic_menu_send" />
     </LinearLayout>
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <LinearLayout
+            android:id="@+id/chat_ll_emoji"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+        </LinearLayout>
+    </HorizontalScrollView>
 
 </LinearLayout>
