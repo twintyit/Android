@@ -3,10 +3,14 @@ package itstep.learning.android_pv_221;
 import android.annotation.SuppressLint;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -32,6 +36,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.spec.ECField;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -49,28 +54,53 @@ public class ChatActivity extends AppCompatActivity {
     private ScrollView chatScroller;
     private EditText etAuthor;
     private EditText etMessage;
+    private View vBell;
     private final ExecutorService threadPool = Executors.newFixedThreadPool(3);
     private final Gson gson = new Gson();
     private final List<ChatMessage> messages = new ArrayList<>();
     private boolean isAuthorFixed = false;
+    private final Handler handler = new Handler();
+    private Animation bellAnimation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
+//            EdgeToEdge.enable(this);
         setContentView(R.layout.activity_chat);
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
-        tvTitle = findViewById(R.id.chat_tv_title);
+//        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
+//            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+//            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+//            return insets;
+//        });
+        tvTitle       = findViewById(R.id.chat_tv_title);
         chatContainer = findViewById(R.id.chat_ll_container);
-        chatScroller = findViewById(R.id.chat_scroller);
-        etAuthor = findViewById(R.id.chat_et_author);
-        etMessage = findViewById(R.id.chat_et_message);
+        chatScroller  = findViewById(R.id.chat_scroller);
+        etAuthor      = findViewById(R.id.chat_et_author);
+        etMessage     = findViewById(R.id.chat_et_message);
+        vBell         = findViewById(R.id.chat_bell);
+        bellAnimation = AnimationUtils.loadAnimation(this, R.anim.bell );
         findViewById(R.id.chat_btn_send).setOnClickListener(this::sendButtonClick);
+        handler.post( this::periodic );
+        chatContainer.setOnClickListener(v -> hideKeyboard());
+        chatScroller.addOnLayoutChangeListener(
+                (View v,
+                 int left, int top, int right, int bottom,
+                 int leftWas, int topWas, int rightWas, int bottomWas) -> chatScroller.post(
+                        ()-> chatScroller.fullScroll( View.FOCUS_DOWN ) )
+        );
+    }
+
+    private void periodic(){
         loadChat();
+        handler.postDelayed( this::periodic, 3000);
+    }
+
+    private void hideKeyboard() {
+        View view = this.getCurrentFocus();
+        if (view != null) {
+            InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
     }
 
     private void sendButtonClick(View view) {
@@ -144,9 +174,9 @@ public class ChatActivity extends AppCompatActivity {
 
     private void loadChat() {
         CompletableFuture
-                .supplyAsync(this::getChatAsString, threadPool)
-                .thenApply(this::processChatResponse)
-                .thenAccept(this::displayChatMessages);
+                .supplyAsync( this::getChatAsString, threadPool )
+                .thenApply( this::processChatResponse )
+                .thenAccept( m -> runOnUiThread( () -> displayChatMessages(m) ) );
     }
 
     private String getChatAsString() {
@@ -181,6 +211,8 @@ public class ChatActivity extends AppCompatActivity {
             return;
         }
 
+        messages.sort( Comparator.comparing( ChatMessage::getMoment ) );
+
         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -189,7 +221,9 @@ public class ChatActivity extends AppCompatActivity {
         Drawable dbOther = getResources().getDrawable(R.drawable.chat_msg_other, getTheme());
         Drawable dbMy = getResources().getDrawable(R.drawable.chat_msg_my, getTheme());
         runOnUiThread( () -> chatContainer.removeAllViews() );
-        for ( ChatMessage cm : chatMessages ) {
+        for( ChatMessage cm : messages ) {
+            if( cm.getView() != null ) continue;
+
             LinearLayout outerLayout = new LinearLayout(ChatActivity.this);
             outerLayout.setOrientation(LinearLayout.VERTICAL);
 
@@ -203,7 +237,7 @@ public class ChatActivity extends AppCompatActivity {
             messageLayout.setOrientation(LinearLayout.VERTICAL);
 
             TextView authorTextView = new TextView(ChatActivity.this);
-            authorTextView.setText(cm.getAuthor());
+            authorTextView.setText( cm.getAuthor() + " " + cm.getMoment() );
             authorTextView.setPadding(30, 5, 30, 5);
             messageLayout.addView(authorTextView);
 
@@ -212,20 +246,25 @@ public class ChatActivity extends AppCompatActivity {
             messageTextView.setPadding(20, 5, 30, 5);
             messageLayout.addView(messageTextView);
 
-            // Определяем стиль и расположение в зависимости от автора сообщения
             if (etAuthor.getText().toString().equals(cm.getAuthor())) {
                 messageLayout.setBackground(dbMy);
-                outerLayoutParams.gravity = Gravity.END; // Сообщения текущего пользователя справа
+                outerLayoutParams.gravity = Gravity.END;
             } else {
                 messageLayout.setBackground(dbOther);
-                outerLayoutParams.gravity = Gravity.START; // Сообщения других пользователей слева
+                outerLayoutParams.gravity = Gravity.START;
             }
 
             messageLayout.setLayoutParams(outerLayoutParams);
             outerLayout.addView(messageLayout);
 
+            cm.setView( messageLayout );
             runOnUiThread(() -> chatContainer.addView(outerLayout));
         }
+
+        chatContainer.post( () -> {
+            chatScroller.fullScroll( View.FOCUS_DOWN ) ;
+            vBell.startAnimation( bellAnimation ) ;
+        } ) ;
 
     }
 
@@ -243,6 +282,7 @@ public class ChatActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        handler.removeCallbacksAndMessages( null );
         threadPool.shutdownNow();
         super.onDestroy();
     }
@@ -273,6 +313,16 @@ public class ChatActivity extends AppCompatActivity {
         private String author;
         private String text;
         private String moment;
+        private View view;
+
+        public View getView() {
+            return view;
+        }
+
+        public void setView(View view) {
+            this.view = view;
+        }
+
 
         public String getId() {
             return id;
@@ -308,6 +358,7 @@ public class ChatActivity extends AppCompatActivity {
             this.moment = moment;
             return this;
         }
+
     }
 }
 

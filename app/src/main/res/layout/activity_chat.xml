@@ -25,16 +25,26 @@
             android:text="Author:"/>
         <EditText
             android:id="@+id/chat_et_author"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:inputType="text"
             android:text="Twintyit"/>
+        <View
+            android:id="@+id/chat_bell"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@android:drawable/ic_popup_reminder"
+            android:backgroundTint="@color/calc_btn_digit" />
     </LinearLayout>
 
     <ScrollView
         android:id="@+id/chat_scroller"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:contentDescription="Messages">
         <LinearLayout
             android:id="@+id/chat_ll_container"
             android:layout_width="match_parent"
@@ -50,17 +60,18 @@
             android:layout_height="wrap_content"
             android:text="Message:"/>
         <EditText
-
             android:id="@+id/chat_et_message"
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="Вітаннєчко++!"/>
+            android:minHeight="48dp"
+            android:text="Hi"/>
 
         <ImageButton
             android:id="@+id/chat_btn_send"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:contentDescription="Send"
             android:src="@android:drawable/ic_menu_send" />
     </LinearLayout>
 
